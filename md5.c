@@ -9,10 +9,10 @@
 #define I(B,C,D) ((C) ^ ((B) | ~(D)))
 #define LEFT_ROTATE(X,C) (((X) << (C)) | ((X) >> (32 - (C))))
 
-#define A0_INIT
-#define B0_INIT
-#define C0_INIT
-#define D0_INIT
+#define A0_INIT 0x67452301
+#define B0_INIT 0xefcdab89
+#define C0_INIT 0x98badcfe
+#define D0_INIT 0x10325476
 
 uint32_t s[64] = {7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
 	          5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20,
@@ -36,11 +36,28 @@ uint32_t K[64] = {0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
 	          0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
 	          0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391};
 
+uint32_t charsToUint32(const unsigned char addr[4]) {
+	uint32_t result = 0;
+	result |= (uint32_t)addr[0];
+	result |= (uint32_t)(addr[1] << 8);
+	result |= (uint32_t)(addr[2] << 16);
+	result |= (uint32_t)(addr[3] << 24);
+
+	return result;
+}
+
+void uint32ToChars(unsigned char addr[4], uint32_t in) {
+	addr[0] = (unsigned char)(in);
+	addr[1] = (unsigned char)(in >> 8);
+	addr[2] = (unsigned char)(in >> 16);
+	addr[3] = (unsigned char)(in >> 24);
+}
+
 void MD5Init(struct MD5Context *ctx) {
-	ctx->a0 = A0_INIT:;
-	ctx->b0 = 0xefcdab89;
-	ctx->c0 = 0x98badcfe;
-	ctx->d0 = 0x10325476;
+	ctx->a0 = A0_INIT;
+	ctx->b0 = B0_INIT;
+	ctx->c0 = C0_INIT;
+	ctx->d0 = D0_INIT;
 	ctx->bits = 0;
 }
 
@@ -48,7 +65,7 @@ void MD5Transform(struct MD5Context *ctx, const unsigned char in[64]) {
 	uint32_t M[16];
 	for(size_t i = 0; i < 16; i++) {
 		size_t startIdx = i * 4;	
-		M[i] = (uint32_t)((in[startIdx]) | (in[startIdx + 1] << 8) | (in[startIdx + 2] << 16) | (in[startIdx + 3] << 24)); //little endian ugh
+		M[i] = charsToUint32(in + startIdx);
 	}
 
 	uint32_t A = ctx->a0;
@@ -113,34 +130,39 @@ void MD5Update(struct MD5Context *ctx, const unsigned char *buf, size_t length) 
 		memset(p, 0, paddingBytes - 8); //fill with zeroes for the amount of padding required, leaving room for last 8 bytes
 	}
 
-	block[56] = (unsigned char)(ctx->bits);
-	block[57] = (unsigned char)((ctx->bits) >> (8));
-	block[58] = (unsigned char)((ctx->bits) >> (16));
-	block[59] = (unsigned char)((ctx->bits) >> (24));
-	block[60] = (unsigned char)((ctx->bits) >> (32));
-	block[61] = (unsigned char)((ctx->bits) >> (40));
-	block[62] = (unsigned char)((ctx->bits) >> (48));
-	block[63] = (unsigned char)((ctx->bits) >> (56));
+	uint32ToChars(block + 56, (uint32_t)(ctx->bits));
+	uint32ToChars(block + 60, (uint32_t)((ctx->bits) >> 32));
 
 	MD5Transform(ctx, block);
 }
 
 void MD5Digest(unsigned char digest[16], struct MD5Context *ctx) {
-	for(size_t i = 0; i < 4; i++) {
-		digest[i] = (unsigned char)(ctx->a0 >> (i * 8)); //little endian output
-		digest[4 + i] = (unsigned char)(ctx->b0 >> (i * 8));
-		digest[8 + i] = (unsigned char)(ctx->c0 >> (i * 8));
-		digest[12 + i] = (unsigned char)(ctx->d0 >> (i * 8));
-	}
+	uint32ToChars(digest, ctx->a0);
+	uint32ToChars(digest + 4, ctx->b0);
+	uint32ToChars(digest + 8, ctx->c0);
+	uint32ToChars(digest + 12, ctx->d0);
 }
 
-void MD5Hexdigest(unsigned char hexdigest[32], struct MD5Context *ctx) {
+void MD5Hexdigest(char hexdigest[32], struct MD5Context *ctx) {
 	unsigned char digest[16];
 	MD5Digest(digest, ctx);
 
-	unsigned char currHex[3];
+	char currHex[3]; //2 chars plus null byte
 	for(size_t i = 0; i < 16; i++) {
 		snprintf(currHex, 3, "%02x", digest[i]); //read into temporary array
-		strncpy(hexdigest + (i * 2), currHex, 2); //copy first 2 characters into the output
+		hexdigest[i * 2] = currHex[0]; //copy 2 chars from temporary variable into the result
+		hexdigest[(i * 2) + 1] = currHex[1];
+	}
+}
+
+int main() {
+	char* (a[4]) = {"asdf", "zxcv", "pouu", "qwer"};
+	struct MD5Context ctx;
+	char digest[32];
+	for(int i = 0; i < 4; i++) {
+		MD5Init(&ctx);
+		MD5Update(&ctx, (unsigned char*)a[i], 4);
+		MD5Hexdigest(digest, &ctx);
+		printf("%.32s\n", digest);
 	}
 }
