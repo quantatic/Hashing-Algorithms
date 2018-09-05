@@ -63,7 +63,7 @@ void MD5Init(struct MD5Context *ctx) {
 
 void MD5Transform(struct MD5Context *ctx, const unsigned char in[64]) {
 	uint32_t M[16];
-	for(size_t i = 0; i < 16; i++) {
+	for(size_t i = 0; i < 16; i++) { //setup M array with input block data
 		size_t startIdx = i * 4;	
 		M[i] = charsToUint32(in + startIdx);
 	}
@@ -95,7 +95,7 @@ void MD5Transform(struct MD5Context *ctx, const unsigned char in[64]) {
 		B = B + LEFT_ROTATE(F, s[i]);
 	}
 
-	ctx->a0 += A;
+	ctx->a0 += A; //update state variables
 	ctx->b0 += B;
 	ctx->c0 += C;
 	ctx->d0 += D;
@@ -155,7 +155,7 @@ void MD5Hexdigest(char hexdigest[32], struct MD5Context *ctx) {
 	}
 }
 
-int main() {
+/**int main() {
 	char* (a[4]) = {"asdf", "zxcv", "pouu", "qwer"};
 	struct MD5Context ctx;
 	char digest[32];
@@ -165,4 +165,4 @@ int main() {
 		MD5Hexdigest(digest, &ctx);
 		printf("%.32s\n", digest);
 	}
-}
+}*/
