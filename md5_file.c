@@ -6,13 +6,14 @@
 
 #define MAX_LINE_SIZE 1000
 void hashFileLines(char* fileNameIn, char* fileNameOut) {
-	FILE *fp = fopen(fileNameIn, "r");
+	FILE *fpIn = fopen(fileNameIn, "r");
+	FILE *fpOut = fopen(fileNameOut, "w");
 
 	char buffer[MAX_LINE_SIZE];
 	struct MD5Context ctx;
 	char digest[32];
 
-	while(fgets(buffer, MAX_LINE_SIZE, fp) != NULL) {
+	while(fgets(buffer, MAX_LINE_SIZE, fpIn) != NULL) {
 		char* newLinePos;
 		if((newLinePos = strchr(buffer, '\n')) != NULL) {
 			*newLinePos = '\0';
@@ -22,11 +23,14 @@ void hashFileLines(char* fileNameIn, char* fileNameOut) {
 		MD5Update(&ctx, (unsigned char*)buffer, strlen(buffer));
 		MD5Hexdigest(digest, &ctx);
 
-		printf("%.32s\n", digest);
+		fprintf(fpOut, "%.32s\n", digest);
 	}
+
+	fclose(fpIn);
+	fclose(fpOut);
 }
 
 int main() {
-	hashFileLines("input.txt", NULL);
+	hashFileLines("input.txt", "output.txt");
 	return EXIT_SUCCESS;
 }
